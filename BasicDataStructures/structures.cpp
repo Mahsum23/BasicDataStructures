@@ -154,29 +154,40 @@ void TestArrayInsertEnd(Array<T>& ar, size_t total)
 template <typename T>
 void TestArrayRemoveStart(Array<T>& ar, size_t total)
 {
+	auto t1 = clk::now();
 	for (size_t i = 0; i < total; ++i)
 	{
 		ar.Remove(0);
 	}
+	auto t2 = clk::now();
+	std::cout << ar.ClassName() << " ";
+	std::cout << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"s << endl;
 }
 
 template <typename T>
 void TestArrayRemoveMid(Array<T>& ar, size_t total)
 {
+	auto t1 = clk::now();
 	for (size_t i = 0; i < total; ++i)
 	{
 		ar.Remove(ar.Size() / 2);
 	}
+	auto t2 = clk::now();
+	std::cout << ar.ClassName() << " ";
+	std::cout << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"s << endl;
 }
 
 template <typename T>
 void TestArrayRemoveEnd(Array<T>& ar, size_t total)
 {
-	
+	auto t1 = clk::now();
 	for (size_t i = 0; i < total; ++i)
 	{
-		ar.Remove(ar.Size());
+		ar.Remove(ar.Size()-1);
 	}
+	auto t2 = clk::now();
+	std::cout << ar.ClassName() << " ";
+	std::cout << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"s << endl;
 }
 
 void AllArrayInsertionTest(size_t ar_size)
@@ -262,117 +273,95 @@ void AllArrayRemovalTest(size_t ar_size)
 	}
 }
 
-static int allocated = 0;
-
-void* operator new(size_t size) 
-{ 
-	allocated += size;
-	return malloc(size); 
+void TestCustomPriorityQueue()
+{
+	CustomPQ<int> cpq;
+	cpq.Enqueue(99);
+	cpq.Enqueue(97);
+	cpq.Enqueue(100);
+	cpq.Enqueue(101);
+	cpq.Enqueue(23);
+	assert(cpq.Pop() == 23);
+	assert(cpq.Peek() == 97);
+	assert(cpq.Pop() == 97);
+	assert(cpq.Pop() == 99);
+	assert(cpq.Pop() == 100);
+	assert(cpq.Pop() == 101);
 }
 
-void operator delete(void* memory, size_t size)
+void PriorityQueueEnqueueTest(int total)
 {
-	allocated -= size;
-	free(memory);
-}
-//
-void operator delete[](void* memory, size_t size)
-{
-	allocated -= size;
-	free(memory);
-}
-
-#include <thread>
-
-struct Pup
-{
-	int x, y, z;
-};
-
-struct Obj
-{
-	Obj()
 	{
-		ptr_ = new Pup[100000];
-		cout << allocated << endl;
-		delete ptr_;
-		cout << allocated << endl;
+		auto t1 = clk::now();
+		CustomPQ<int> cpq;
+		for (size_t i = 0; i < total; ++i)
+		{
+			cpq.Enqueue(i);
+		}
+		auto t2 = clk::now();
+		std::cout << "CustomPQ Enqueue Test" << " ";
+		std::cout << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"s << endl;
 	}
 
-	void del()
 	{
-		delete[] ptr_;
+		auto t1 = clk::now();
+		StandardPQ<int> spq;
+		for (size_t i = 0; i < total; ++i)
+		{
+			spq.Enqueue(i);
+		}
+		auto t2 = clk::now();
+		std::cout << "StandardPQ Enqueue Test" << " ";
+		std::cout << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"s << endl;
 	}
-	Pup* ptr_;
-};
+}
+
+void PriorityQueuePopTest(int total)
+{
+	{
+		CustomPQ<int> cpq;
+		for (int i = 0; i < total; ++i)
+			cpq.Enqueue(i);
+		
+		auto t1 = clk::now();
+		while (!cpq.Empty())
+		{
+			cpq.Pop();
+		}
+		auto t2 = clk::now();
+		std::cout << "CustomPQ Pop Test" << " ";
+		std::cout << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"s << endl;
+	}
+
+	{
+		StandardPQ<int> spq;
+		for (int i = 0; i < total; ++i)
+			spq.Enqueue(i);
+
+		auto t1 = clk::now();
+		while (!spq.Empty())
+		{
+			spq.Pop();
+		}
+		auto t2 = clk::now();
+		std::cout << "StandardPQ Pop Test" << " ";
+		std::cout << chrono::duration_cast<chrono::milliseconds>(t2 - t1).count() << " ms"s << endl;
+	}
+}
 
 int main()
 {
-	//TestSingleArray();
-	//TestVectorArray();
-	//TestFactorArray();
-	//TestMatrixArray();
-	//TestStandardArray();
-	//AllArrayInsertionTest(10000);
-	//AllArrayRemovalTest(10000);
-	// 
-	// 
-	// 
-	//{
-	//	int* par[100000];
-	//	for (int i = 0; i < 100000; ++i)
-	//	{
-	//		par[i] = new int(99);
-	//		std::this_thread::sleep_for(500ns);
-	//	}
-	//	cout << allocated << endl;
-	//	for (int i = 0; i < 100000; ++i)
-	//	{
-	//		delete par[i];
-	//		std::this_thread::sleep_for(500ns);
-	//	}
-	//}
-	//{
-	//	unique_ptr<Obj> p = make_unique<Obj>();
-	//	cout << allocated << endl;
-	//}
-	//cout << allocated << endl;
+	TestSingleArray();
+	TestVectorArray();
+	TestFactorArray();
+	TestMatrixArray();
+	TestStandardArray();
+	AllArrayInsertionTest(10000);
+	AllArrayRemovalTest(10000);
 
-
-	//{
-	//	Pup* p = new Pup[10];
-	//	std::this_thread::sleep_for(1s);
-	//	cout << allocated << endl;
-	//	delete[] p;
-	//	cout << allocated << endl;
-	//}
-
-	{
-		int* p = new int[1000000];
-		std::this_thread::sleep_for(1s);
-		cout << allocated << endl;
-		delete[] p;
-		cout << allocated << endl;
-	}
-	
-
-	//Obj obj = Obj();
-	//cout << allocated << endl;
-	//std::this_thread::sleep_for(1s);
-	//obj.del();
-	//cout << allocated << endl;
-
-	//{
-	//	SingleArray<int> sa;
-	//	for (int i = 0; i < 100000; ++i)
-	//	{
-	//		sa.Insert(0, 0);
-	//		std::this_thread::sleep_for(100ns);
-	//	}
-	//	delete[] sa.ptr_;
-	//}
-	std::this_thread::sleep_for(10s);
-	//cout << "OK" << endl;
+	PriorityQueueEnqueueTest(10000);
+	PriorityQueuePopTest(10000);
+	cout << "OK" << endl;
 	
 	cin.get();
 }

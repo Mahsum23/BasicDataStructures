@@ -6,6 +6,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <queue>
 
 template <typename T>
 class Array
@@ -101,8 +102,8 @@ public:
 
 	~SingleArray()
 	{
-		//delete[] ptr_;
-		//std::destroy(ptr_, ptr_ + size_);
+		std::destroy(ptr_, ptr_ + size_);
+		delete[] ptr_;
 	}
 
 public:
@@ -149,19 +150,15 @@ public:
 			std::move(old_ptr, old_ptr + ind, ptr_);
 			ptr_[ind] = item;
 			std::move(old_ptr + ind, old_ptr + size_, ptr_ + ind + 1);
+			std::destroy_n(old_ptr, size_);
 			++size_;
 			capacity_ += delta_;
 		}
 		else
 		{
-			
-			if (size_ == 2981)
-			{
-				std::cout << "OPS";
-			}
-			
-				std::move_backward(ptr_ + ind, ptr_ + size_, ptr_ + ind + 1);
-				ptr_[ind] = item;
+			int cnt = (ptr_ + size_) - (ptr_ + ind);
+			std::move_backward(ptr_ + ind, ptr_ + size_, ptr_ + size_ + 1);
+			ptr_[ind] = item;
 			++size_;
 		}
 	}
@@ -170,7 +167,7 @@ public:
 	{
 		T res = ptr_[ind];
 		std::move(ptr_ + ind + 1, ptr_ + size_, ptr_ + ind);
-		delete (ptr_ + size_);
+		std::destroy_at(ptr_ + size_ - 1);
 		--size_;
 		return res;
 	}
@@ -217,7 +214,8 @@ public:
 
 	~VectorArray()
 	{
-		//std::destroy(ptr_, ptr_ + capacity_);
+		std::destroy(ptr_, ptr_ + capacity_);
+		delete[] ptr_;
 	}
 
 
@@ -229,18 +227,21 @@ private:
 	T* ptr_ = nullptr;
 };
 
+template <typename T>
+class MatrixArray;
 
 template <typename T>
 class FactorArray : public Array<T>
 {
 public:
+	friend class MatrixArray<T>;
 	using Iterator = T*;
 	using ConstIterator = const T*;
 
 	FactorArray() = default;
 
 	FactorArray(size_t size, size_t factor = 2)
-		: factor_(factor)
+		: factor_(factor), size_(size)
 	{
 		ptr_ = new T[size];
 	}
@@ -274,7 +275,7 @@ public:
 		else
 		{
 			ptr_[ind] = item;
-			std::move_backward(ptr_ + ind, ptr_ + size_, ptr_ + ind + 1);
+			std::move_backward(ptr_ + ind, ptr_ + size_, ptr_ + size_ + 1);
 			++size_;
 		}
 	}
@@ -283,7 +284,7 @@ public:
 	{
 		T res = ptr_[ind];
 		std::move(ptr_ + ind + 1, ptr_ + size_, ptr_ + ind);
-		delete (ptr_ + size_);
+		std::destroy_at(ptr_ + size_ - 1);
 		--size_;
 		return res;
 	}
@@ -335,7 +336,7 @@ public:
 
 	~FactorArray()
 	{
-		//std::destroy(ptr_, ptr_ + capacity_);
+		std::destroy(ptr_, ptr_ + capacity_);
 	}
 
 
@@ -362,7 +363,7 @@ public:
 	{
 		size_t outer_size = size / inner_size_ + 1;
 		for (int i = 0; i < outer_size; ++i)
-			data_.Insert(new FactorArray<T>(inner_size_), i / inner_size_);
+			data_.Insert(FactorArray<T>(inner_size_), i / inner_size_);
 		size_ = size;
 	}
 
@@ -372,7 +373,7 @@ public:
 		size_t outer_size = list.size() / inner_size_ + 1;
 		for (int i = 0; i < outer_size; ++i)
 		{
-			data_.Insert(new FactorArray<T>(inner_size_), i / inner_size_);
+			data_.Insert(FactorArray<T>(inner_size_), i / inner_size_);
 			capacity_ += inner_size_;
 		}
 		for (int i = 0; i < list.size(); ++i)
@@ -387,7 +388,7 @@ public:
 		assert(ind <= size_);
 		if (capacity_ == size_)
 		{
-			data_.Insert(new FactorArray<T>(inner_size_), size_ / inner_size_);
+			data_.Insert(FactorArray<T>(inner_size_), size_ / inner_size_);
 			capacity_ += inner_size_;
 			size_t outer_ind = ind / inner_size_;
 			size_t inner_ind = ind % inner_size_;
@@ -408,7 +409,7 @@ public:
 		{
 			(*this)[i] = (*this)[i + 1];
 		}
-		delete (data_[size_ / inner_size_] + size_ % inner_size_);
+		std::destroy_at(data_[size_ / inner_size_].ptr_ + size_ % inner_size_);
 		--size_;
 		return res;
 	}
@@ -435,12 +436,12 @@ public:
 
 	T& operator[](size_t index) 
 	{
-		return data_[index / inner_size_]->operator[](index % inner_size_);
+		return data_[index / inner_size_][index % inner_size_];
 	}
 
 	const T& operator[](size_t index) const
 	{
-		return data_[index / inner_size_]->operator[](index % inner_size_);
+		return data_[index / inner_size_][index % inner_size_];
 	}
 
 	std::string ClassName() const noexcept override
@@ -450,11 +451,13 @@ public:
 
 	bool operator==(const MatrixArray<T>& other) const
 	{
-		if (Size() != other.Size())
+		if (other.Size() != Size())
 			return false;
-		for (int i = 0; i < data_.Size(); ++i)
-			if (!std::equal(data_[i]->cbegin(), data_[i]->cend(), other.data_[i]->cbegin(), other.data_[i]->cend()))
+		for (int i = 0; i < Size(); ++i)
+		{
+			if (other[i] != (*this)[i])
 				return false;
+		}
 		return true;
 	}
 
@@ -465,10 +468,6 @@ public:
 
 	~MatrixArray()
 	{
-		for (int i = 0; i < data_.Size(); ++i)
-		{
-			delete data_[i];
-		}
 		
 	}
 
@@ -479,7 +478,7 @@ private:
 	size_t capacity_ = 0;
 	size_t inner_size_ = 10;
 	
-	FactorArray<FactorArray<T>*> data_;
+	FactorArray<FactorArray<T>> data_;
 	
 };
 
@@ -559,8 +558,95 @@ template <typename T>
 class PriorityQueue
 {
 public:
-	virtual void Enqueue(int value, int priority) = 0;
+	virtual void Enqueue(T value) = 0;
+	virtual T Peek() const = 0;
+	virtual T Pop() = 0;
+	virtual bool Empty() const = 0;
+};
 
+template <typename T, typename Cont = std::vector<T>, typename Comp = std::greater<>>
+class CustomPQ : public PriorityQueue<T>
+{
+public:
+
+	void Enqueue(T value) override
+	{
+		data_.push_back(value);
+		std::swap(data_[0], data_.back());
+		HeapifyAll();
+	}
+
+	T Peek() const override
+	{
+		return data_[0];
+	}
+
+	T Pop() override
+	{
+		std::swap(data_[0], data_.back());
+		T res = data_.back();
+		data_.pop_back();
+		HeapifyAll();
+		
+		return res;
+	}
+	
+	bool Empty() const override
+	{
+		return data_.size() == 0;
+	}
+
+private:
+	void HeapifyAll()
+	{
+		for (int i = (data_.size() - 2) / 2; i >= 0; --i)
+		{
+			Heapify(i);
+		}
+	}
+	void Heapify(int index)
+	{
+		int l = 2 * index + 1;
+		int r = 2 * index + 2;
+		int x = index;
+		if (l < data_.size() && Comp()(data_[index], data_[l])) x = l;
+		if (r < data_.size() && Comp()(data_[index], data_[r])) x = r;
+		if (x == index) return;
+		std::swap(data_[x], data_[index]);
+		Heapify(x);
+	}
+
+	Cont data_;
+};
+
+template <typename T>
+class StandardPQ : public PriorityQueue<T>
+{
+public:
+	void Enqueue(T value) override
+	{
+		pq_.push(value);
+	}
+
+	T Peek() const override
+	{
+		return pq_.top();
+	}
+
+	T Pop() override
+	{
+		T res = pq_.top();
+		pq_.pop();
+		return res;
+	}
+
+	bool Empty() const override
+	{
+		return pq_.empty();
+	}
+
+private:
+	std::priority_queue<T> pq_;
 };
 
 
